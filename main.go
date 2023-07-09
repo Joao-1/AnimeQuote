@@ -15,7 +15,8 @@ import (
 
 
 func main() {
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil { panic(err) }
 	
 	twitter := new(providers.Twitter)
 	twitter = twitter.Init(os.Getenv("CONSUMER_ID"), os.Getenv("CONSUMER_SECRET"), os.Getenv("ACCESS_TOKEN"), os.Getenv("ACCESS_TOKEN_SECRET"), "https://api.twitter.com")
