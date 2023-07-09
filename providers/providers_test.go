@@ -1,10 +1,9 @@
 package providers
 
 import (
-	"encoding/base64"
+	"AnimeQuote/common"
 	"fmt"
 	"net/http"
-	"net/http/httptest"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,33 +20,43 @@ func (m *MockClient) RoundTrip(req *http.Request) (*http.Response, error) {
 	return args.Get(0).(*http.Response), args.Error(1)
 }
 
+var (
+	tweetBody = "Hello World!"
+	tweetId = "1676661887809855481"
+	tweetResponse = fmt.Sprintf(`{"data": {"edit_history_tweet_ids": ["1676661887809855488"],"id": %q,"text": %q}}`, tweetId, tweetBody)
+)
+
 func TestTwitter(t *testing.T) {
-	tweetBody := "Hello World!"
-	tweetId := "1676661887809855481"
-	tweetResponse :=  fmt.Sprintf(`{"data": {"edit_history_tweet_ids": ["1676661887809855488"],"id": %q,"text": %q}}`, tweetId, tweetBody)
-	fakeImageResponse := "123"
+	uploadMediaId := "123"
 
-	server := httptest.NewServer(http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Set("Content-Type", "application/json")
-
-		switch req.URL.Path {
-			case "/2/tweets":
+	server := common.Server(t, []common.Route{
+		{
+			Path: "/2/tweets",
+			Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
 				res.WriteHeader(http.StatusCreated)
 				_, err := res.Write([]byte(tweetResponse))
 				if err != nil { t.Fatal(err) }
-			case "/image":
+			},
+		},
+		{
+			Path: "/1.1/media/upload.json",
+			Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
 				res.WriteHeader(http.StatusOK)
-				_, err := res.Write([]byte(fakeImageResponse))
+				_, err := res.Write([]byte(fmt.Sprintf(`{"media_id_string": %q}`, uploadMediaId)))
 				if err != nil { t.Fatal(err) }
-			case "/1.1/media/upload.json":
-				fmt.Println("req: ", req)
+			},
+		},
+		{
+			Path: "/image",
+			Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
 				res.WriteHeader(http.StatusOK)
-				_, err := res.Write([]byte(`{"media_id_string": "123"}`))
+				_, err := res.Write([]byte("123"))
 				if err != nil { t.Fatal(err) }
-		}
-	}))
+			},
+		},
+	})
 
-	fakeImageToDownload := server.URL + "/image"
+	fakeImageToUpload := server.URL + "/image"
 
 	twitter := new(Twitter) 
 	twitter = twitter.Init("123", "456", "789", "012", server.URL)
@@ -60,26 +69,44 @@ func TestTwitter(t *testing.T) {
 		assert.Equal(t, tweet.Data.Id, tweetId)
 	})
 
+	t.Run("TweetWithImage", func(t *testing.T) {
+		tweet, err := twitter.Tweet(TweetParams{Body: tweetBody, Image: fakeImageToUpload})
+
+		assert.Nil(t, err)
+		assert.NotEmpty(t, tweet.Data.Id)
+		assert.Equal(t, tweet.Data.Id, tweetId)
+	})
+
 	t.Run("UploadImage", func(t *testing.T) {
-		mediaId := "123"
-
-		uploadedMediaDetails, err := twitter.UploadImage(fakeImageToDownload)
+		uploadedMediaDetails, err := twitter.UploadImage(fakeImageToUpload)
 
 		assert.Nil(t, err)
-		assert.NotEmpty(t, uploadedMediaDetails.id)
-		assert.Equal(t, uploadedMediaDetails.id, mediaId)
+		assert.NotEmpty(t, uploadedMediaDetails.Id)
+		assert.Equal(t, uploadedMediaDetails.Id, uploadMediaId)
 	})
-	
-	t.Run("Download image", func(t *testing.T) {
-		oneTwoThreebase64 := "MTIz"
+}
 
-		fakeImgBase64, err := downloadImage(fakeImageToDownload)
+func TestGetCharacterImage(t *testing.T) {
+	character := "Echidna";
+	characterImage := "https://static.wikia.nocookie.net/rezero/images/0/02/Echidna_Anime_PV_2.png/revision/latest?cb=20200611134057"
+	getResponse := fmt.Sprintf(`{"data": {"character": {"name": {"full": %q},"image": {"large": %q,"medium": ""}}}}`, character, characterImage)
 
-		fakeImg, _ := base64.StdEncoding.DecodeString(fakeImgBase64)
-
-		assert.Nil(t, err)
-		assert.NotEmpty(t, fakeImgBase64)
-		assert.Equal(t, fakeImgBase64, oneTwoThreebase64)
-		assert.Equal(t, fakeImageResponse, string(fakeImg))
+	server := common.Server(t, []common.Route{
+		{
+			Path: "/",
+			Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
+				res.WriteHeader(http.StatusOK)
+				_, err := res.Write([]byte(getResponse))
+				if err != nil { t.Fatal(err) }
+			},
+		},
 	})
+
+	client := http.Client{}
+
+	res, err := GetAnilistCharacterImageURL(character, server.URL, client)
+	fmt.Println(res)
+	assert.Nil(t, err)
+	assert.Equal(t, character, res.Data.Character.Name.Full)
+	assert.Equal(t, characterImage, res.Data.Character.Image.Large)
 }

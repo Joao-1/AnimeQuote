@@ -1,11 +1,11 @@
 package providers
 
 import (
+	"AnimeQuote/helpers"
 	"context"
-	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -24,7 +24,7 @@ type TweetParams struct {
 }
 
 type Media struct {
-	id string
+	Id string
 }
 
 type CreateMediaResponse struct {
@@ -36,6 +36,7 @@ type Tweet struct {
 		Id string `json:"id"`
 		Text string `json:"text"`
 	} `json:"data"`
+	ImageUrl string
 }
 
 type TwitterProvider interface {
@@ -65,25 +66,29 @@ func (t *Twitter) Tweet(params TweetParams) (Tweet, error) {
 		Text: params.Body,
 	}
 
-	tweetResponse, err := t.client.CreateTweet(context.Background(), req)
-	if err != nil {
-		log.Panicf("create tweet error: %v", err)
+	if params.Image != "" {
+		req.Media = &twitter.CreateTweetMedia{IDs: []string{params.Image}}
 	}
+
+	tweetResponse, err := t.client.CreateTweet(context.Background(), req)
+	if err != nil { return Tweet{}, err} 
 
 	enc, err := json.MarshalIndent(tweetResponse, "", "    ")
-	if err != nil {
-		log.Panic(err)
-	}
+	if err != nil { return Tweet{}, err}
 
+	fmt.Println(string(enc))
 	var tweet Tweet
 	errParse := json.Unmarshal(enc, &tweet)
-	if errParse != nil { return Tweet{}, errParse }	
+	if errParse != nil { return Tweet{}, errParse }
+	
+	tweet.ImageUrl = helpers.ExtractTwitterImageURL(tweet.Data.Text)
 
+	fmt.Println(tweet.ImageUrl)
 	return tweet, nil
 }
 
 func (t *Twitter) UploadImage(image string) (Media, error) {
-	imageBase64, err := downloadImage(image)
+	imageBase64, err := helpers.DownloadImage(image)
 	if err != nil { return Media{}, err }
 
 	data := url.Values{}
@@ -105,19 +110,5 @@ func (t *Twitter) UploadImage(image string) (Media, error) {
 	errParse := json.Unmarshal(bodyBytes, &CreateMediaResponse)
 	if errParse != nil { return Media{}, errParse }	
 
-	return Media{id: CreateMediaResponse.MediaID}, nil
-}
-
-func downloadImage(url string) (string, error) {
-	res, err := http.Get(url)
-	if err != nil { return "", err }
-
-	defer res.Body.Close()
-
-	imageData, err := io.ReadAll(res.Body)
-	if err != nil { return "", err }
-	
-	imageBase64 := base64.StdEncoding.EncodeToString(imageData)
-
-	return imageBase64, nil
+	return Media{Id: CreateMediaResponse.MediaID}, nil
 }
