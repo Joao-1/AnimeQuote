@@ -57,7 +57,6 @@ func GetAnilistCharacterImageURL(characterName, serverUrL string, client http.Cl
 	if err != nil { return AnilistResponse{}, err }	
 	
 	var anilistResponse AnilistResponse
-	fmt.Println(string(bodyBytes))
 	errParse := json.Unmarshal(bodyBytes, &anilistResponse)
 	if errParse != nil { return AnilistResponse{}, errParse }	
 	

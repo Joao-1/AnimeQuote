@@ -4,7 +4,6 @@ import (
 	"AnimeQuote/helpers"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -76,14 +75,12 @@ func (t *Twitter) Tweet(params TweetParams) (Tweet, error) {
 	enc, err := json.MarshalIndent(tweetResponse, "", "    ")
 	if err != nil { return Tweet{}, err}
 
-	fmt.Println(string(enc))
 	var tweet Tweet
 	errParse := json.Unmarshal(enc, &tweet)
 	if errParse != nil { return Tweet{}, errParse }
 	
 	tweet.ImageUrl = helpers.ExtractTwitterImageURL(tweet.Data.Text)
 
-	fmt.Println(tweet.ImageUrl)
 	return tweet, nil
 }
 

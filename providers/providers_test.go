@@ -105,7 +105,7 @@ func TestGetCharacterImage(t *testing.T) {
 	client := http.Client{}
 
 	res, err := GetAnilistCharacterImageURL(character, server.URL, client)
-	fmt.Println(res)
+	
 	assert.Nil(t, err)
 	assert.Equal(t, character, res.Data.Character.Name.Full)
 	assert.Equal(t, characterImage, res.Data.Character.Image.Large)
