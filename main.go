@@ -49,10 +49,10 @@ func MakePost(twitter *providers.Twitter, client http.Client, animechan animecha
 	`, quote.Quote, quote.Character, quote.Anime, regex.ReplaceAllString(quote.Character, ""), regex.ReplaceAllString(quote.Anime, ""))
 
 	anilistResponse, err := providers.GetAnilistCharacterImageURL(quote.Character, "https://graphql.anilist.co", client)
-	if err != nil { panic(err) }
+	if err != nil { fmt.Println(err); MakePost(twitter, client, animechan) }
 
 	media, err := twitter.UploadImage(anilistResponse.Data.Character.Image.Large)
-	if err != nil { panic(err) }
+	if err != nil { fmt.Println(err); MakePost(twitter, client, animechan) }
 
 	tweet, _ := twitter.Tweet(providers.TweetParams{Body: formatedQuote, Image: media.Id})
 
