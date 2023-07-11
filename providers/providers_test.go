@@ -87,26 +87,48 @@ func TestTwitter(t *testing.T) {
 }
 
 func TestGetCharacterImage(t *testing.T) {
-	character := "Echidna";
-	characterImage := "https://static.wikia.nocookie.net/rezero/images/0/02/Echidna_Anime_PV_2.png/revision/latest?cb=20200611134057"
-	getResponse := fmt.Sprintf(`{"data": {"character": {"name": {"full": %q},"image": {"large": %q,"medium": ""}}}}`, character, characterImage)
-
-	server := common.Server(t, []common.Route{
-		{
-			Path: "/",
-			Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
-				res.WriteHeader(http.StatusOK)
-				_, err := res.Write([]byte(getResponse))
-				if err != nil { t.Fatal(err) }
+	t.Run("GetCharacterImage", func(t *testing.T) {
+		character := "Echidna";
+		characterImage := "https://static.wikia.nocookie.net/rezero/images/0/02/Echidna_Anime_PV_2.png/revision/latest?cb=20200611134057"
+		getResponse := fmt.Sprintf(`{"data": {"character": {"name": {"full": %q},"image": {"large": %q,"medium": ""}}}}`, character, characterImage)
+	
+		server := common.Server(t, []common.Route{
+			{
+				Path: "/",
+				Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
+					res.WriteHeader(http.StatusOK)
+					_, err := res.Write([]byte(getResponse))
+					if err != nil { t.Fatal(err) }
+				},
 			},
-		},
+		})
+	
+		client := http.Client{}
+	
+		res, err := GetAnilistCharacterImageURL(character, server.URL, client)
+		
+		assert.Nil(t, err)
+		assert.Equal(t, character, res.Data.Character.Name.Full)
+		assert.Equal(t, characterImage, res.Data.Character.Image.Large)
 	})
 
-	client := http.Client{}
-
-	res, err := GetAnilistCharacterImageURL(character, server.URL, client)
+	t.Run("GetCharacterImageNotFound", func(t *testing.T) {
+		character := "A Character That Does Not Exist";
+		
+		server := common.Server(t, []common.Route{
+			{
+				Path: "/",
+				Handler: func(res http.ResponseWriter, req *http.Request, t *testing.T) {
+					res.WriteHeader(http.StatusNotFound)
+				},
+			},
+		})
 	
-	assert.Nil(t, err)
-	assert.Equal(t, character, res.Data.Character.Name.Full)
-	assert.Equal(t, characterImage, res.Data.Character.Image.Large)
+		client := http.Client{}
+	
+		_, err := GetAnilistCharacterImageURL(character, server.URL, client)
+		
+		assert.NotNil(t, err)
+		assert.ErrorContains(t, err, "Character does not found")
+	})
 }

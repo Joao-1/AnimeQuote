@@ -51,6 +51,8 @@ func GetAnilistCharacterImageURL(characterName, serverUrL string, client http.Cl
 	res, err := client.Do(req)
 	if err != nil { return AnilistResponse{}, err }
 
+	if res.StatusCode == 404 { return AnilistResponse{}, fmt.Errorf("Character does not found") }
+
 	defer res.Body.Close()
 
 	bodyBytes, err := io.ReadAll(res.Body)
