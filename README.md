@@ -3,7 +3,7 @@
 <p align="center">A simple script made to post quotes from anime characters every hour.</p>
 <p align="center">
 <img alt="GitHub Workflow Status (with event)" src="https://img.shields.io/github/actions/workflow/status/Joao-1/AnimeQuote/lint-test.yaml">
-<img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/ranAnimeQuotes">
+<a href="https://twitter.com/ranAnimeQuotes"><img alt="Twitter Follow" src="https://img.shields.io/twitter/follow/ranAnimeQuotes"></a>
 </p>
 
 <h2 >Description</h2>
