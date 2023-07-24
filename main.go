@@ -12,8 +12,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-
-
 func main() {
 	fmt.Println("Starting bot...")
 
@@ -27,15 +25,28 @@ func main() {
 
 	animechan := animechan.Animechan{Client: &client}
 
+	again := make(chan bool)
+
+	go func() {
+		for range again {
+			fmt.Println("Trying again...")
+			CallMakePost(twitter, client, animechan, again)
+		}
+	}()
+
 	fmt.Println("Making first post...")
-	MakePost(twitter, client, animechan)
+	CallMakePost(twitter, client, animechan, make(chan bool))
+
 	for range time.Tick(time.Hour * 1) {
 		fmt.Println("Making new post...")
-		tweet, err := MakePost(twitter, client, animechan)
-		if err != nil { MakePost(twitter, client, animechan) }
-
-		fmt.Println(tweet)
+		CallMakePost(twitter, client, animechan, again)
 	}
+}
+
+func CallMakePost(twitter *providers.Twitter, client http.Client, animechan animechan.Animechan, again chan bool) {
+	tweet, err := MakePost(twitter, client, animechan)
+	if err != nil { again <- true }
+	fmt.Println(tweet)
 }
 
 func MakePost(twitter *providers.Twitter, client http.Client, animechan animechan.Animechan) (providers.Tweet, error) {
