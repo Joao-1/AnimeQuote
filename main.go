@@ -56,7 +56,8 @@ func MakePost(twitter *providers.Twitter, client http.Client, animechan animecha
 	media, err := twitter.UploadImage(anilistResponse.Data.Character.Image.Large)
 	if err != nil { return providers.Tweet{}, err }
 
-	tweet, _ := twitter.Tweet(providers.TweetParams{Body: formatedQuote, Image: media.Id})
-
+	tweet, err := twitter.Tweet(providers.TweetParams{Body: formatedQuote, Image: media.Id})
+	if err != nil { return providers.Tweet{}, err }
+	
 	return tweet, nil
 }
