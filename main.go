@@ -31,14 +31,16 @@ func main() {
 	MakePost(twitter, client, animechan)
 	for range time.Tick(time.Hour * 1) {
 		fmt.Println("Making new post...")
-		MakePost(twitter, client, animechan)
+		tweet, err := MakePost(twitter, client, animechan)
+		if err != nil { MakePost(twitter, client, animechan) }
+
+		fmt.Println(tweet)
 	}
 }
 
-func MakePost(twitter *providers.Twitter, client http.Client, animechan animechan.Animechan) {
+func MakePost(twitter *providers.Twitter, client http.Client, animechan animechan.Animechan) (providers.Tweet, error) {
 	quote, err := animechan.Random().Only()
-	fmt.Println(quote)
-	if err != nil { fmt.Println(err); MakePost(twitter, client, animechan) }
+	if err != nil { return providers.Tweet{}, err }
 
 	regex := regexp.MustCompile(`[^a-zA-Z0-9]+`)
 
@@ -49,12 +51,12 @@ func MakePost(twitter *providers.Twitter, client http.Client, animechan animecha
 	`, quote.Quote, quote.Character, quote.Anime, regex.ReplaceAllString(quote.Character, ""), regex.ReplaceAllString(quote.Anime, ""))
 
 	anilistResponse, err := providers.GetAnilistCharacterImageURL(quote.Character, "https://graphql.anilist.co", client)
-	if err != nil { fmt.Println(err); MakePost(twitter, client, animechan) }
+	if err != nil { return providers.Tweet{}, err }
 
 	media, err := twitter.UploadImage(anilistResponse.Data.Character.Image.Large)
-	if err != nil { fmt.Println(err); MakePost(twitter, client, animechan) }
+	if err != nil { return providers.Tweet{}, err }
 
 	tweet, _ := twitter.Tweet(providers.TweetParams{Body: formatedQuote, Image: media.Id})
 
-	fmt.Printf("%+v\n", tweet)
+	return tweet, nil
 }
